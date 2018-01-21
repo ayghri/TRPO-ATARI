@@ -1,6 +1,6 @@
 # TRPO-ATARI
 
-TRPO implemenation on the Atari Learning Environement (ALE), done as a RL project </br>
+TRPO implementation on the Atari Learning Environement (ALE), done as a RL project </br>
 The ALE environment part was based on :
 <ol>
 <li> DQN : https://github.com/devsisters/DQN-tensorflow </li>
