@@ -8,6 +8,7 @@ import numpy as np
 import tensorflow as tf
 import prettytensor as pt
 import scipy.signal
+import config
 
 def discount(x, gamma):
     assert x.ndim >= 1
@@ -27,10 +28,11 @@ def line_search(f, x, fullstep, expected_improve_rate):
                     improvement_at_step_n/(expected_improve_rate*beta**n)>0.1
     """
     
-    accept_ratio = .1
+    accept_ratio = config.LN_ACCEPT_RATE
     max_backtracks = 10
     fval = f(x)
-    
+    stepfrac=1
+    stepfrac=stepfrac*0.5
     for stepfrac in .5**np.arange(max_backtracks):
         xnew = x + stepfrac * fullstep
         newfval = f(xnew)
@@ -72,6 +74,7 @@ def conjugate_gradient(f_Ax, b, n_iters=10, gtol=1e-10):
     
 def choice_weighted(pi):
 #    np.random.seed(np.random.randint(0,2**10))
+    #print(pi.shape)
     return np.random.choice(np.arange(len(pi)), 1, p=pi)[0]
         
         
@@ -159,16 +162,17 @@ class SetFromFlat(object):
 
     def __init__(self, session, var_list):
         self.session = session
-        assigns = []
-        shapes = map(var_shape, var_list)
+        shapes = list(map(var_shape, var_list))
         total_size = sum(np.prod(shape) for shape in shapes)
-        self.theta = theta = tf.placeholder(tf.float32, [total_size])
+        self.theta = tf.placeholder(tf.float32, [total_size])
         start = 0
         assigns = []
-        for (shape, v) in zip(shapes, var_list):
-            size = np.prod(shape)
-            assigns.append(tf.assign(v,tf.reshape(theta[start:start +size],
-                        shape)))
+        i = 0
+        for v in var_list:
+            size = np.prod(shapes[i])
+            #assigns.append(tf.assign(v,tf.reshape(self.theta[start:start +size],shapes[i])))
+            assigns.append(tf.assign(v,tf.reshape(self.theta[start:start +size],shapes[i])))
+            i = i+1
             start += size
         self.op = tf.group(*assigns)
 
@@ -183,6 +187,14 @@ def initialize_uninitialized(sess):
 
     if len(not_initialized_vars):
         sess.run(tf.variables_initializer(not_initialized_vars))
+        
+def initialize_zeros(sess):
+    global_vars          = tf.global_variables()
+    assigns = []
+    for g in global_vars:
+        assigns.append(tf.assign(g, tf.zeros_like(g)))
+    sess.run(assigns)
+    
 def write_dict(dic):
 
     fout = "./here.txt"
@@ -191,5 +203,6 @@ def write_dict(dic):
     for k, v in dic.items():
         fo.write(str(k) + ' >>> '+ str(v) + '\n')
     fo.close()
+
 
 

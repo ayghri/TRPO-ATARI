@@ -10,6 +10,7 @@ import tensorflow as tf
 from ale_python_interface import ALEInterface
 from collections import deque
 import img_functions as imf
+import config
 
 
 
@@ -22,13 +23,16 @@ class ALE_ENVIRONMENT(object):
         
         self.actions_set = self.ale.getMinimalActionSet().tolist()
         self.action_to_index = {a:i for i,a in enumerate(self.actions_set)}
-        self.state_dummy = np.zeros((1,np.prod(config.STATE_DIM)))
+        #self.state_dummy = 255*np.ones((1,config.STATE_DIM[0],config.STATE_DIM[1],config.SKIP_FRAMES))
+        self.states_dim = (config.STATE_DIM[0],config.STATE_DIM[1],config.SKIP_FRAMES)        
+        self.state_dummy = 255*np.ones((1,np.prod(self.states_dim)))
         
-        self.states_dim = np.prod(config.STATE_DIM)
-        self.states_dimF = tf.cast(self.states_dim,tf.float32)
         self.actions_dim = len(self.actions_set)
         
-        self.preprocess_stack = deque([], 2)
+        self.preprocess_stack = deque([], config.SKIP_FRAMES)
+        
+        self.max_episode_len = config.MAX_EPISODE_LEN
+        
 
     def load_rom(self,rom_file):
 
@@ -40,9 +44,11 @@ class ALE_ENVIRONMENT(object):
         self.ale.loadROM(str.encode(rom_file))
         
     def generate_episodes(self,num_episodes,agent):
-        
+        print("Generateting %d episodes"%num_episodes)
         episodes = []
         lives = self.ale.lives()
+        _,dist = agent.act(self.state_dummy)
+        print("pi_theta for blank white state:",dist)
         for i in range(num_episodes):
             print("Starting episode %d"%i)
             episode_done = False
@@ -53,14 +59,16 @@ class ALE_ENVIRONMENT(object):
             rewards = [0]
 
             self.skip_frames(states,config.SKIP_FRAMES)
-            
-            while not episode_done:
+            i = 0
+            while not episode_done and i<self.max_episode_len:
                 action_idx,action_dist = agent.act(states[-1])
+                
                 reward = 0
                 for _ in range(config.SKIP_FRAMES):
-                    reward = reward + self.ale.act(self.actions_set[action_idx])
+                    reward = reward + np.clip(self.ale.act(self.actions_set[action_idx]),-1,1)
                     self.preprocess_stack.append(self.ale.getScreenRGB())
-                state = imf.preprocess(self.preprocess_stack)
+                    i += 1
+                state = imf.preprocess(self.preprocess_stack,True)
                 states.append(state)
                 actions_dist.append([action_dist])
                 actions.append(action_idx)
@@ -77,17 +85,17 @@ class ALE_ENVIRONMENT(object):
         
     def reset(self):
         self.ale.reset_game()
-        self.preprocess_stack = deque([], 2)
+        self.preprocess_stack = deque([], config.SKIP_FRAMES)
         
     def skip_frames(self,states,num_frames):
     #perform nullops
         for _ in range(num_frames):
-            self.ale.act(3)
+            self.ale.act(0)
             self.preprocess_stack.append(self.ale.getScreenRGB())
         
-        if len(self.preprocess_stack) < 2:
-            self.ale.act(3)
+        if len(self.preprocess_stack) < config.SKIP_FRAMES:
+            self.ale.act(0)
             self.preprocess_stack.append(self.ale.getScreenRGB())
-        states.append(imf.preprocess(self.preprocess_stack))
+        states.append(imf.preprocess(self.preprocess_stack,True))
             
             

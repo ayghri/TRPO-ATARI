@@ -11,16 +11,13 @@ import img_functions as imf
 import time
 import tensorflow as tf
 import numpy as np
+import utils
 
 def main():
     session = tf.Session()
     env = ale_environment.ALE_ENVIRONMENT('./roms/breakout.bin',session)
     agent = trpo.TRPO(env,session)
-    session.run(tf.global_variables_initializer())
-    
-    
-
-def test():
+    #session.run(tf.global_variables_initializer())
+    utils.initialize_zeros(session)
     for _ in range(100): agent.train()
-    episodes = env.generate_episodes(5,agent)
-    
+

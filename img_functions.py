@@ -11,9 +11,15 @@ from scipy.misc import imshow
 import config
 
 #returns preprocessed value of most recent frame
-def preprocess(frames):
-	return resize(grayscale(np.maximum(frames[0], frames[1]))).reshape(1,-1)
-
+def preprocess(frames,flatten=False):
+     
+    preprocessed = np.zeros((1,config.STATE_DIM[0],config.STATE_DIM[1],config.SKIP_FRAMES))
+    for i,f in enumerate(frames):
+        preprocessed[0,:,:,i] = resize(grayscale(f))
+    if flatten:
+        return preprocessed.reshape(1,np.prod(config.STATE_DIM)*config.SKIP_FRAMES)
+    return preprocessed
+    
 #Takes in an rgb image returns the grayscale
 def grayscale(frame):
     R = frame[:,:, 0]
