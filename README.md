@@ -7,6 +7,7 @@ The ALE environment part was based on :
 </ol>
 
 <h2>Requirements</h2>
+
 - Tensorflow
 - numpy
 - scipy
